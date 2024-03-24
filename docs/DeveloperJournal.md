@@ -7,3 +7,8 @@
   - [How to Write Better Git Commit Messages – A Step-By-Step Guide (freecodecamp.org)](https://www.freecodecamp.org/news/how-to-write-better-git-commit-messages/)
   - [angular/CONTRIBUTING.md at main · angular/angular (github.com)](https://github.com/angular/angular/blob/main/CONTRIBUTING.md#-commit-message-format)
 - 实现了对剪切板增删改查的操作
+
+## Day 2
+
+- 实现了基本的用户注册登录接口，还没有测试
+- 小玩了一下，所以今天工作量很小
