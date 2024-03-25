@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
 
 func GenDigest(content string) (string, error) {
 	digest := sha256.Sum256([]byte(content))
