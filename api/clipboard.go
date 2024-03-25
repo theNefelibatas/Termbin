@@ -54,7 +54,9 @@ func UpdateClipboard() gin.HandlerFunc {
 
 		var req model.ClipboardReq
 		if err := ctx.ShouldBind(&req); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{})
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"err": "bind error",
+			})
 			return
 		}
 		req.ID = ctx.Param("id")
@@ -84,5 +86,31 @@ func DeleteClipboard() gin.HandlerFunc {
 		}
 
 		ctx.String(http.StatusOK, "deleted %s\n", uuid)
+	}
+}
+
+func AuthorizeClipboard() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var req model.AuthClipboardReq
+		if err := ctx.ShouldBind(&req); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"err": "bind error",
+			})
+			return
+		}
+		req.ID = ctx.Param("id")
+
+		srv := service.GetClipboardSrv()
+		url, err := srv.AuthorizeClipboard(ctx, &req)
+		if err != nil {
+			ctx.String(http.StatusOK, "failed to authorize %s: "+err.Error(), req.UserEmail)
+			return
+		}
+
+		if req.UserEmail == "" {
+			ctx.String(http.StatusOK, "only author has access to %s", url)
+			return
+		}
+		ctx.String(http.StatusOK, "authorize %s to %s", req.UserEmail, url)
 	}
 }

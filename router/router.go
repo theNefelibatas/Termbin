@@ -23,6 +23,7 @@ func InitRouter(r *gin.Engine) {
 			authed.GET("/:id", api.GetClipboard())
 			authed.PUT("/:id", api.UpdateClipboard())
 			authed.DELETE("/:id", api.DeleteClipboard())
+			authed.POST("/auth/:id", api.AuthorizeClipboard())
 		}
 	}
 }

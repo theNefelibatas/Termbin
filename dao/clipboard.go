@@ -31,7 +31,7 @@ func (dao *ClipboardDAO) GetClipboard(id string) (*model.Clipboard, error) {
 }
 
 func (dao *ClipboardDAO) UpdateClipboard(id string, clipboard *model.Clipboard) error {
-	if err := dao.Model(&model.Clipboard{}).Where("short = ? OR uuid = ? OR alias = ?", id, id, id).Updates(&clipboard).Error; err != nil {
+	if err := dao.Model(&model.Clipboard{}).Where("short = ? OR uuid = ? OR alias = ?", id, id, id).Save(&clipboard).Error; err != nil {
 		return err
 	}
 	return nil

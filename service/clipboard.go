@@ -218,3 +218,43 @@ func (s ClipboardSrv) DeleteClipboard(ctx *gin.Context, req *model.ClipboardReq)
 	//	return clipboard.UUID, err
 	//}
 }
+
+// AuthorizeClipboard 给剪切板设置指定用户可见
+func (s ClipboardSrv) AuthorizeClipboard(ctx *gin.Context, req *model.AuthClipboardReq) (string, error) {
+	userDAO := dao.NewUserDAO(ctx)
+	clipboardDAO := dao.NewClipboardDAO(ctx)
+
+	id := req.ID
+	userEmail := req.UserEmail
+
+	clipboard, err := clipboardDAO.GetClipboard(id)
+	if err != nil {
+		return "", err
+	}
+
+	if clipboard.Author == nil {
+		return clipboard.URL, errors.New("cannot authorize since the clipboard authorless")
+	}
+	if userEmail == "" {
+		clipboard.Access = model.AuthorAccess
+		// fmt.Println("empty user email")
+	} else {
+		// fmt.Println("user email is " + userEmail)
+		user, err := userDAO.GetUserByUserEmail(userEmail)
+		if err != nil {
+			return clipboard.URL, errors.New("invalid user email")
+		}
+		clipboard.Access = model.AuthorizedAccess
+		clipboard.AllowedUsers = &user.ID
+	}
+
+	userID, exist := ctx.Get("UserID")
+	if !exist {
+		return clipboard.URL, errors.New("access denied")
+	}
+	if userID.(uint) != *clipboard.Author {
+		return clipboard.URL, errors.New("access denied")
+	}
+	err = clipboardDAO.UpdateClipboard(id, clipboard)
+	return clipboard.URL, err
+}

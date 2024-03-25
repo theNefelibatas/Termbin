@@ -22,6 +22,11 @@ type ClipboardReq struct {
 	Content string `form:"content" json:"content"`
 }
 
+type AuthClipboardReq struct {
+	ID        string `form:"id" json:"id"`
+	UserEmail string `form:"user_email" json:"user_email"`
+}
+
 type ClipboardResp struct {
 	Date    string `json:"date"`
 	Digest  string `json:"digest"`
