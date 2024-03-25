@@ -24,33 +24,22 @@ func (dao *ClipboardDAO) NewClipboard(clipboard *model.Clipboard) error {
 
 func (dao *ClipboardDAO) GetClipboard(id string) (*model.Clipboard, error) {
 	clipboard := &model.Clipboard{}
-	if err := dao.Model(&model.Clipboard{}).Where("short = ? OR uuid = ?", id, id).First(&clipboard).Error; err != nil {
+	if err := dao.Model(&model.Clipboard{}).Where("short = ? OR uuid = ? OR alias = ?", id, id, id).First(&clipboard).Error; err != nil {
 		return nil, err
 	}
 	return clipboard, nil
 }
 
-func (dao *ClipboardDAO) UpdateClipboard(id string, content string) (*model.Clipboard, error) {
-	clipboard := &model.Clipboard{}
-	if err := dao.Model(&model.Clipboard{}).Where("short = ? OR uuid = ?", id, id).First(&clipboard).Error; err != nil {
-		return nil, err
+func (dao *ClipboardDAO) UpdateClipboard(id string, clipboard *model.Clipboard) error {
+	if err := dao.Model(&model.Clipboard{}).Where("short = ? OR uuid = ? OR alias = ?", id, id, id).Updates(&clipboard).Error; err != nil {
+		return err
 	}
-	clipboard.Content = content
-	clipboard.Size = len(content)
-	if err := dao.Model(&model.Clipboard{}).Where("short = ? OR uuid = ?", id, id).Updates(&clipboard).Error; err != nil {
-		return nil, err
-	}
-
-	return clipboard, nil
+	return nil
 }
 
-func (dao *ClipboardDAO) DeleteClipboard(id string) (*model.Clipboard, error) {
-	clipboard := &model.Clipboard{}
-	if err := dao.Model(&model.Clipboard{}).Where("short = ? OR uuid = ?", id, id).First(&clipboard).Error; err != nil {
-		return nil, err
-	}
+func (dao *ClipboardDAO) DeleteClipboard(id string, clipboard *model.Clipboard) error {
 	if err := dao.Model(&model.Clipboard{}).Delete(&clipboard).Error; err != nil {
-		return nil, err
+		return err
 	}
-	return clipboard, nil
+	return nil
 }

@@ -4,7 +4,7 @@ import (
 	"Termbin/dao"
 	"Termbin/model"
 	"Termbin/util"
-	"io/ioutil"
+	"errors"
 	"sync"
 	"time"
 
@@ -30,17 +30,14 @@ func GetClipboardSrv() *ClipboardSrv {
 }
 
 // NewClipboard 新建剪切板
-func (s ClipboardSrv) NewClipboard(ctx *gin.Context, req *model.NewClipboardReq) (model.Clipboard, error) {
-	// 获取剪贴板内容
-	// content := ctx.PostForm("c")
-	file, _ := ctx.FormFile("c")
-	src, _ := file.Open()
-	defer src.Close()
+func (s ClipboardSrv) NewClipboard(ctx *gin.Context, req *model.ClipboardReq) (model.ClipboardResp, error) {
+	clipboardDAO := dao.NewClipboardDAO(ctx)
 
-	content, _ := ioutil.ReadAll(src)
+	// 获取剪贴板内容
+	content := req.Content
 
 	// 生成剪贴板的哈希值
-	digest, _ := util.GenDigest(string(content))
+	digest, _ := util.GenDigest(content)
 
 	// 生成剪贴板的 uuid
 	uuid, _ := util.GenUUID()
@@ -50,82 +47,174 @@ func (s ClipboardSrv) NewClipboard(ctx *gin.Context, req *model.NewClipboardReq)
 
 	// 构造剪贴板对象
 	clipboard := model.Clipboard{
-		Date:    time.Now().Format(time.RFC3339),
-		Digest:  digest,
-		Short:   short,
-		Size:    len(content),
-		URL:     "http://127.0.0.1/" + short,
-		Status:  "created",
-		UUID:    uuid,
-		Content: string(content),
+		Author:       nil,
+		AllowedUsers: nil,
+		Access:       model.AllAccess,
+		Date:         time.Now().Format(time.RFC3339),
+		Digest:       digest,
+		Short:        short,
+		Size:         len(content),
+		URL:          "http://127.0.0.1/api/v1/" + short,
+		UUID:         uuid,
+		Content:      content,
+	}
+
+	// 检查登录状态
+	userID, exist := ctx.Get("UserID")
+	if exist {
+		authorID := userID.(uint)
+		clipboard.Author = &authorID
 	}
 
 	// 在 DAO 层创建剪切板记录
-	err := dao.NewClipboardDAO(ctx).NewClipboard(&clipboard)
+	err := clipboardDAO.NewClipboard(&clipboard)
 	if err != nil {
-		return model.Clipboard{}, err
+		return model.ClipboardResp{
+			Date:   clipboard.Date,
+			Size:   clipboard.Size,
+			Status: "failed",
+		}, err
 	}
 
-	return clipboard, nil
+	resp := model.ClipboardResp{
+		Date:   clipboard.Date,
+		Digest: clipboard.Digest,
+		Short:  clipboard.Short,
+		Size:   clipboard.Size,
+		URL:    clipboard.URL,
+		Status: "created",
+		UUID:   clipboard.UUID,
+	}
+
+	return resp, nil
 }
 
 // GetClipboard 获取剪切板内容
-func (s ClipboardSrv) GetClipboard(ctx *gin.Context, req *model.GetClipboardReq) (string, error) {
-	// 获取剪贴板 ID
-	id := ctx.Param("id")
-	// id := req.ID
+func (s ClipboardSrv) GetClipboard(ctx *gin.Context, req *model.ClipboardReq) (string, error) {
+	clipboardDAO := dao.NewClipboardDAO(ctx)
 
+	// 获取剪贴板 ID
+	id := req.ID
 	// 在 DAO 层中查询剪贴板内容
-	clipboard, err := dao.NewClipboardDAO(ctx).GetClipboard(id)
+	clipboard, err := clipboardDAO.GetClipboard(id)
 	if err != nil {
 		return "", err
 	}
 
-	return clipboard.Content, nil
+	switch clipboard.Access {
+	case model.AllAccess:
+		return clipboard.Content, nil
+	case model.AuthorAccess:
+		userID, exist := ctx.Get("UserID")
+		if !exist {
+			return "", errors.New("access denied")
+		}
+		if userID.(uint) != *clipboard.Author {
+			return "", errors.New("access denied")
+		}
+		return clipboard.Content, nil
+	case model.AuthorizedAccess:
+		userID, exist := ctx.Get("UserID")
+		if !exist {
+			return "", errors.New("access denied")
+		}
+		if userID.(uint) == *clipboard.Author || userID.(uint) == *clipboard.AllowedUsers {
+			return clipboard.Content, nil
+		}
+		return "", errors.New("access denied")
+	}
+	return "", errors.New("wtf")
 }
 
 // UpdateClipboard 更新剪切板内容
-func (s ClipboardSrv) UpdateClipboard(ctx *gin.Context, req *model.UpdateClipboardReq) (string, error) {
+func (s ClipboardSrv) UpdateClipboard(ctx *gin.Context, req *model.ClipboardReq) (string, error) {
+	clipboardDAO := dao.NewClipboardDAO(ctx)
 	// 获取剪贴板 ID
-	id := ctx.Param("id")
-	// id := req.ID
+	id := req.ID
+	// 获取剪贴板待更新内容
+	content := req.Content
 
-	// 获取剪贴板内容
-	// content := ctx.PostForm("c")
-	// content := req.Content
-	file, _ := ctx.FormFile("c")
-	src, err := file.Open()
-	if err != nil {
-		return "", err
-	}
-	defer src.Close()
-	content, _ := ioutil.ReadAll(src)
-
-	// 在 DAO 层中更新剪贴板内容
-	clipboard, err := dao.NewClipboardDAO(ctx).UpdateClipboard(id, string(content))
+	clipboard, err := clipboardDAO.GetClipboard(id)
 	if err != nil {
 		return "", err
 	}
 
-	return clipboard.URL, nil
+	clipboard.Content = content
+	clipboard.Size = len(content)
+	clipboard.Digest, _ = util.GenDigest(content)
+
+	if clipboard.Author == nil {
+		err := clipboardDAO.UpdateClipboard(id, clipboard)
+		return clipboard.URL, err
+	}
+
+	userID, exist := ctx.Get("UserID")
+	if !exist {
+		return clipboard.URL, errors.New("access denied")
+	}
+	if userID.(uint) != *clipboard.Author {
+		return clipboard.URL, errors.New("access denied")
+	}
+	err = clipboardDAO.UpdateClipboard(id, clipboard)
+	return clipboard.URL, err
+
+	//switch clipboard.Access {
+	//case model.AllAccess:
+	//	err := clipboardDAO.UpdateClipboard(id, clipboard)
+	//	return clipboard.URL, err
+	//default:
+	//	userID, exist := ctx.Get("UserID")
+	//	if !exist {
+	//		return clipboard.URL, errors.New("access denied")
+	//	}
+	//	if userID.(uint) != *clipboard.Author {
+	//		return clipboard.URL, errors.New("access denied")
+	//	}
+	//	err := clipboardDAO.UpdateClipboard(id, clipboard)
+	//	return clipboard.URL, err
+	//}
 }
 
 // DeleteClipboard 删除剪切板
-func (s ClipboardSrv) DeleteClipboard(ctx *gin.Context, req *model.DeleteClipboardReq) (string, error) {
+func (s ClipboardSrv) DeleteClipboard(ctx *gin.Context, req *model.ClipboardReq) (string, error) {
+	clipboardDAO := dao.NewClipboardDAO(ctx)
+
 	// 获取剪贴板 ID
-	id := ctx.Param("id")
-	// id := req.ID
+	id := req.ID
 
-	//clipboard, err := dao.NewClipboardDAO(ctx).GetClipboard(id)
-	//if err != nil {
-	//	return "", err
-	//}
-
-	// 在 DAO 层中删除剪贴板内容
-	clipboard, err := dao.NewClipboardDAO(ctx).DeleteClipboard(id)
+	clipboard, err := clipboardDAO.GetClipboard(id)
 	if err != nil {
 		return "", err
 	}
 
-	return clipboard.UUID, nil
+	if clipboard.Author == nil {
+		err := clipboardDAO.DeleteClipboard(id, clipboard)
+		return clipboard.UUID, err
+	}
+
+	userID, exist := ctx.Get("UserID")
+	if !exist {
+		return clipboard.UUID, errors.New("access denied")
+	}
+	if userID.(uint) != *clipboard.Author {
+		return clipboard.UUID, errors.New("access denied")
+	}
+	err = clipboardDAO.DeleteClipboard(id, clipboard)
+	return clipboard.UUID, err
+
+	//switch clipboard.Access {
+	//case model.AllAccess:
+	//	err := clipboardDAO.DeleteClipboard(id, clipboard)
+	//	return clipboard.UUID, err
+	//default:
+	//	userID, exist := ctx.Get("UserID")
+	//	if !exist {
+	//		return clipboard.UUID, errors.New("access denied")
+	//	}
+	//	if userID.(uint) != *clipboard.Author {
+	//		return clipboard.UUID, errors.New("access denied")
+	//	}
+	//	err := clipboardDAO.DeleteClipboard(id, clipboard)
+	//	return clipboard.UUID, err
+	//}
 }
