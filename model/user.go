@@ -7,8 +7,9 @@ import (
 
 type User struct {
 	gorm.Model
-	UserName string `gorm:"unique"`
-	Password string
+	UserEmail string `gorm:"unique"`
+	UserName  string
+	Password  string
 }
 
 const passwordCost = 16
@@ -29,14 +30,23 @@ func (user *User) CheckPassword(password string) bool {
 	return err == nil
 }
 
-// UserReq 用户请求
-type UserReq struct {
-	UserName string `form:"user_name" json:"user_name" binding:"required"`
-	Password string `form:"password" json:"password" binding:"required"`
+// UserSignUpReq 用户注册请求
+type UserSignUpReq struct {
+	UserEmail string `form:"user_email" json:"user_email" binding:"required"`
+	UserName  string `form:"user_name" json:"user_name" binding:"required"`
+	Password  string `form:"password" json:"password" binding:"required"`
+}
+
+// UserSignInReq 用户登录请求
+type UserSignInReq struct {
+	UserEmail string `form:"user_email" json:"user_email" binding:"required"`
+	Password  string `form:"password" json:"password" binding:"required"`
 }
 
 // UserResp 用户响应数据
 type UserResp struct {
-	ID       uint   `form:"id" json:"id" `
-	UserName string `form:"user_name" json:"user_name"` // 创建
+	ID        uint   `json:"id"`
+	UserName  string `json:"user_name"`
+	UserEmail string `json:"user_email"`
+	Token     string `json:"token"`
 }

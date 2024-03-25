@@ -3,6 +3,7 @@ package service
 import (
 	"Termbin/dao"
 	"Termbin/model"
+	"Termbin/util"
 	"errors"
 	"sync"
 
@@ -28,12 +29,13 @@ func GetUserSrv() *UserSrv {
 	return UserSrvIns
 }
 
-func (s UserSrv) SignUp(ctx *gin.Context, req *model.UserReq) error {
+func (s UserSrv) SignUp(ctx *gin.Context, req *model.UserSignUpReq) error {
 	userDAO := dao.NewUserDAO(ctx)
-	user, err := userDAO.GetUserByUserName(req.UserName)
+	user, err := userDAO.GetUserByUserEmail(req.UserEmail)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		user = &model.User{
-			UserName: req.UserName,
+			UserEmail: req.UserEmail,
+			UserName:  req.UserName,
 		}
 		// 密码加密存储
 		if err = user.SetPassword(req.Password); err != nil {
@@ -50,19 +52,25 @@ func (s UserSrv) SignUp(ctx *gin.Context, req *model.UserReq) error {
 	return err
 }
 
-func (s UserSrv) SignIn(ctx *gin.Context, req *model.UserReq) (*model.UserResp, error) {
+func (s UserSrv) SignIn(ctx *gin.Context, req *model.UserSignInReq) (*model.UserResp, error) {
 	userDAO := dao.NewUserDAO(ctx)
-	user, err := userDAO.GetUserByUserName(req.UserName)
+	user, err := userDAO.GetUserByUserEmail(req.UserEmail)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.New("user non-existent")
 	}
 	if !user.CheckPassword(req.Password) {
-		return nil, errors.New("invalid username or password")
+		return nil, errors.New("invalid email or password")
+	}
+	token, err := util.GenerateToken(user.ID, user.UserEmail)
+	if err != nil {
+
 	}
 
 	u := &model.UserResp{
-		ID:       user.ID,
-		UserName: user.UserName,
+		ID:        user.ID,
+		UserName:  user.UserName,
+		UserEmail: user.UserEmail,
+		Token:     token,
 	}
 
 	return u, nil

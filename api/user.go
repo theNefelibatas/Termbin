@@ -10,7 +10,7 @@ import (
 
 func UserSignUp() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var req model.UserReq
+		var req model.UserSignUpReq
 		if err := ctx.ShouldBind(&req); err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"err": "bind error",
@@ -21,7 +21,7 @@ func UserSignUp() gin.HandlerFunc {
 		err := srv.SignUp(ctx, &req)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{
-				"err": "sign up error",
+				"err": err.Error(),
 			})
 			return
 		}
@@ -32,7 +32,7 @@ func UserSignUp() gin.HandlerFunc {
 
 func UserSignIn() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var req model.UserReq
+		var req model.UserSignInReq
 		if err := ctx.ShouldBind(&req); err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"err": "bind error",
@@ -40,12 +40,15 @@ func UserSignIn() gin.HandlerFunc {
 			return
 		}
 		srv := service.GetUserSrv()
-		err := srv.SignIn(ctx, &req)
+		resp, err := srv.SignIn(ctx, &req)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{
-				"err": "sign in error",
+				"err": err.Error(),
 			})
 			return
 		}
+		ctx.JSON(http.StatusOK, gin.H{
+			"data": resp,
+		})
 	}
 }
