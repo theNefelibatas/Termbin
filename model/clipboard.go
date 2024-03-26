@@ -1,6 +1,8 @@
 package model
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+)
 
 type Clipboard struct {
 	gorm.Model
@@ -15,16 +17,19 @@ type Clipboard struct {
 	UUID         string `gorm:"uniqueIndex"`
 	Size         int
 	Content      string
+	Burn         bool
 }
 
 type ClipboardReq struct {
 	ID      string `form:"id" json:"id"`
 	Content string `form:"content" json:"content"`
+	Sunset  int    `form:"sunset" json:"sunset"`
 }
 
 type AuthClipboardReq struct {
 	ID        string `form:"id" json:"id"`
 	UserEmail string `form:"user_email" json:"user_email"`
+	Burn      bool   `form:"burn" json:"burn"`
 }
 
 type ClipboardResp struct {
