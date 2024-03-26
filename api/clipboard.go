@@ -4,6 +4,7 @@ import (
 	"Termbin/model"
 	"Termbin/service"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,11 +26,15 @@ func NewClipboard() gin.HandlerFunc {
 			return
 		}
 
-		//ctx.JSON(http.StatusOK, gin.H{
-		//	"data": clipboard,
-		//})
-		ctx.String(http.StatusOK, "date: %s\ndigest: %s\nshort: %s\nsize: %d\nurl: %s\nstatus: %s\nuuid: %s\n",
-			clipboard.Date, clipboard.Digest, clipboard.Short, clipboard.Size, clipboard.URL, clipboard.Status, clipboard.UUID)
+		userAgent := ctx.GetHeader("User-Agent")
+		if strings.Contains(userAgent, "curl") {
+			ctx.String(http.StatusOK, "date: %s\ndigest: %s\nshort: %s\nsize: %d\nurl: %s\nstatus: %s\nuuid: %s\n",
+				clipboard.Date, clipboard.Digest, clipboard.Short, clipboard.Size, clipboard.URL, clipboard.Status, clipboard.UUID)
+		} else {
+			ctx.JSON(http.StatusOK, gin.H{
+				"data": clipboard,
+			})
+		}
 	}
 }
 
@@ -46,7 +51,14 @@ func GetClipboard() gin.HandlerFunc {
 			return
 		}
 
-		ctx.String(http.StatusOK, "%s\n", content)
+		userAgent := ctx.GetHeader("User-Agent")
+		if strings.Contains(userAgent, "curl") {
+			ctx.String(http.StatusOK, "%s\n", content)
+		} else {
+			ctx.JSON(http.StatusOK, gin.H{
+				"data": content,
+			})
+		}
 	}
 }
 
@@ -69,7 +81,15 @@ func UpdateClipboard() gin.HandlerFunc {
 			return
 		}
 
-		ctx.String(http.StatusOK, "%s updated\n", url)
+		userAgent := ctx.GetHeader("User-Agent")
+		if strings.Contains(userAgent, "curl") {
+			ctx.String(http.StatusOK, "%s updated\n", url)
+		} else {
+			ctx.JSON(http.StatusOK, gin.H{
+				"data": url,
+			})
+		}
+
 	}
 }
 
@@ -86,7 +106,15 @@ func DeleteClipboard() gin.HandlerFunc {
 			return
 		}
 
-		ctx.String(http.StatusOK, "deleted %s\n", uuid)
+		userAgent := ctx.GetHeader("User-Agent")
+		if strings.Contains(userAgent, "curl") {
+			ctx.String(http.StatusOK, "deleted %s\n", uuid)
+		} else {
+			ctx.JSON(http.StatusOK, gin.H{
+				"data": uuid,
+			})
+		}
+
 	}
 }
 
@@ -112,6 +140,17 @@ func AuthorizeClipboard() gin.HandlerFunc {
 			ctx.String(http.StatusOK, "only author has access to %s", url)
 			return
 		}
-		ctx.String(http.StatusOK, "authorize %s to %s", req.UserEmail, url)
+
+		userAgent := ctx.GetHeader("User-Agent")
+		if strings.Contains(userAgent, "curl") {
+			ctx.String(http.StatusOK, "authorize %s to %s", req.UserEmail, url)
+		} else {
+			ctx.JSON(http.StatusOK, gin.H{
+				"data": gin.H{
+					"user_email": req.UserEmail,
+					"url":        url,
+				},
+			})
+		}
 	}
 }
