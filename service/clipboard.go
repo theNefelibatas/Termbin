@@ -57,11 +57,16 @@ func (s *ClipboardSrv) NewClipboard(ctx *gin.Context, req *model.ClipboardReq) (
 		Date:         time.Now().Format(time.RFC3339),
 		Digest:       digest,
 		Short:        short,
+		Alias:        nil,
 		Size:         len(content),
 		URL:          "http://127.0.0.1/api/v1/" + short,
 		UUID:         uuid,
 		Content:      content,
 		Burn:         false,
+	}
+
+	if req.ID != "" {
+		clipboard.Alias = &req.ID
 	}
 
 	// 检查登录状态

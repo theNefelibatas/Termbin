@@ -19,7 +19,7 @@ func InitRouter(r *gin.Engine) {
 		authed.Use(middleware.JWTAuth())
 		{
 			authed.POST("/", api.NewClipboard())
-			authed.POST("/:alias", api.NewClipboard())
+			authed.POST("/:id", api.NewClipboard())
 			authed.GET("/:id", api.GetClipboard())
 			authed.PUT("/:id", api.UpdateClipboard())
 			authed.DELETE("/:id", api.DeleteClipboard())

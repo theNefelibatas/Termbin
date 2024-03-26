@@ -17,6 +17,7 @@ func NewClipboard() gin.HandlerFunc {
 			})
 			return
 		}
+		req.ID = ctx.Param("id")
 		srv := service.GetClipboardSrv()
 		clipboard, err := srv.NewClipboard(ctx, &req)
 		if err != nil {
