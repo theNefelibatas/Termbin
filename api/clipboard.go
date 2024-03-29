@@ -4,11 +4,17 @@ import (
 	"Termbin/model"
 	"Termbin/service"
 	"Termbin/util"
+	"bytes"
 	"io/ioutil"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/alecthomas/chroma"
+	"github.com/alecthomas/chroma/formatters"
+	"github.com/alecthomas/chroma/lexers"
+	"github.com/alecthomas/chroma/styles"
 	"github.com/gin-gonic/gin"
 )
 
@@ -78,8 +84,32 @@ func GetClipboard() gin.HandlerFunc {
 		}
 
 		userAgent := ctx.GetHeader("User-Agent")
+		codeFileExt := model.CodeFileExt[filepath.Ext(ctx.Request.URL.Path)]
 		if strings.Contains(userAgent, "curl") {
 			ctx.String(http.StatusOK, "%s", content)
+		} else if util.IsBrowserUserAgent(userAgent) && codeFileExt != "" {
+
+			lexer := lexers.Get(codeFileExt)
+			if lexer == nil {
+				lexer = lexers.Fallback
+			}
+			lexer = chroma.Coalesce(lexer)
+			style := styles.Get("github")
+			if style == nil {
+				style = styles.Fallback
+			}
+			formatter := formatters.Get("html")
+			if formatter == nil {
+				formatter = formatters.Fallback
+			}
+			iterator, _ := lexer.Tokenise(nil, string(content))
+			var buf bytes.Buffer
+
+			_ = formatter.Format(&buf, style, iterator)
+			result := buf.String()
+
+			ctx.Header("Content-Type", "text/html")
+			ctx.String(http.StatusOK, "%s", result)
 		} else {
 			contentType, _ := util.GetContentType(ctx.Request.URL.Path)
 			if contentType != "" {
