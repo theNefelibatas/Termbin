@@ -3,6 +3,7 @@ package api
 import (
 	"Termbin/model"
 	"Termbin/service"
+	"Termbin/util"
 	"net/http"
 	"strings"
 
@@ -18,7 +19,7 @@ func NewClipboard() gin.HandlerFunc {
 			})
 			return
 		}
-		req.ID = ctx.Param("id")
+		req.ID, _ = util.RemoveExt(ctx.Param("id"))
 		srv := service.GetClipboardSrv()
 		clipboard, err := srv.NewClipboard(ctx, &req)
 		if err != nil {
@@ -43,6 +44,7 @@ func GetClipboard() gin.HandlerFunc {
 		req := model.ClipboardReq{
 			ID: ctx.Param("id"),
 		}
+		req.ID, _ = util.RemoveExt(req.ID)
 
 		srv := service.GetClipboardSrv()
 		content, err := srv.GetClipboard(ctx, &req)
@@ -55,9 +57,16 @@ func GetClipboard() gin.HandlerFunc {
 		if strings.Contains(userAgent, "curl") {
 			ctx.String(http.StatusOK, "%s\n", content)
 		} else {
-			ctx.JSON(http.StatusOK, gin.H{
-				"data": content,
-			})
+			contentType, _ := util.GetContentType(ctx.Request.URL.Path)
+			if contentType != "" {
+				// ctx.Header("content-type", contentType)
+				ctx.Data(http.StatusOK, contentType, []byte(content))
+			} else {
+				ctx.JSON(http.StatusOK, gin.H{
+					"data": content,
+				})
+			}
+
 		}
 	}
 }
@@ -72,7 +81,7 @@ func UpdateClipboard() gin.HandlerFunc {
 			})
 			return
 		}
-		req.ID = ctx.Param("id")
+		req.ID, _ = util.RemoveExt(ctx.Param("id"))
 
 		srv := service.GetClipboardSrv()
 		url, err := srv.UpdateClipboard(ctx, &req)
@@ -98,6 +107,7 @@ func DeleteClipboard() gin.HandlerFunc {
 		req := model.ClipboardReq{
 			ID: ctx.Param("id"),
 		}
+		req.ID, _ = util.RemoveExt(req.ID)
 
 		srv := service.GetClipboardSrv()
 		uuid, err := srv.DeleteClipboard(ctx, &req)
