@@ -30,3 +30,16 @@
 - 实现超时销毁功能，超时销毁用的是 `time.AfterFunc`，感觉可能会有一些小问题
 - 实现了别名功能
 - 实现了对 `curl` 的 User-Agent 的判断，根据判断结果返回不同数据格式的响应
+
+## Day 7
+
+- 前两天上课 + 崩铁更新 + 王者更新，直接零工作量😭😭😭
+- 实现了对 MIME 类型的支持，可以根据后缀来设置不同的 `Content-Type`，参考：
+  - [常见 MIME 类型列表 - HTTP | MDN](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types)
+  - [HTTP content-type | 菜鸟教程](https://www.runoob.com/http/http-content-type.html)
+- 在此之前都是假设请求的类型是 json 或者 form-data 类型的字符串，但是实际上题目里用 `curl -F content=@-` 发起请求时是文件类型:
+  - 将 `ShouldBind` 更换为 `FormFile`，支持上传文件
+- 支持根据 `User-Agent` 来决定是否进行代码高亮，参考：
+  - [各大浏览器UserAgent总结（超全）-腾讯云开发者社区-腾讯云](https://cloud.tencent.com/developer/article/1758440)
+  - 代码高亮使用了第三方库：`github.com/alecthomas/chroma`
+- 写完了测试用例，通过 `curl` 进行测试
