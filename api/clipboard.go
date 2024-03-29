@@ -4,7 +4,9 @@ import (
 	"Termbin/model"
 	"Termbin/service"
 	"Termbin/util"
+	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -13,12 +15,34 @@ import (
 func NewClipboard() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var req model.ClipboardReq
-		if err := ctx.ShouldBind(&req); err != nil {
+		//if err := ctx.ShouldBind(&req); err != nil {
+		//	ctx.JSON(http.StatusBadRequest, gin.H{
+		//		"err": "bind error",
+		//	})
+		//	return
+		//}
+		file, err := ctx.FormFile("content")
+		if err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{
-				"err": "bind error",
+				"err": "invalid file:" + err.Error(),
 			})
 			return
 		}
+		content, _ := file.Open()
+		defer content.Close()
+		req.Content, _ = ioutil.ReadAll(content)
+
+		sunset := ctx.PostForm("sunset")
+		if sunset != "" {
+			req.Sunset, err = strconv.Atoi(sunset)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{
+					"err": "invalid sunset value",
+				})
+				return
+			}
+		}
+
 		req.ID, _ = util.RemoveExt(ctx.Param("id"))
 		srv := service.GetClipboardSrv()
 		clipboard, err := srv.NewClipboard(ctx, &req)
@@ -55,18 +79,17 @@ func GetClipboard() gin.HandlerFunc {
 
 		userAgent := ctx.GetHeader("User-Agent")
 		if strings.Contains(userAgent, "curl") {
-			ctx.String(http.StatusOK, "%s\n", content)
+			ctx.String(http.StatusOK, "%s", content)
 		} else {
 			contentType, _ := util.GetContentType(ctx.Request.URL.Path)
 			if contentType != "" {
 				// ctx.Header("content-type", contentType)
-				ctx.Data(http.StatusOK, contentType, []byte(content))
+				ctx.Data(http.StatusOK, contentType, content)
 			} else {
 				ctx.JSON(http.StatusOK, gin.H{
-					"data": content,
+					"data": string(content),
 				})
 			}
-
 		}
 	}
 }
@@ -75,12 +98,35 @@ func UpdateClipboard() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
 		var req model.ClipboardReq
-		if err := ctx.ShouldBind(&req); err != nil {
+		//if err := ctx.ShouldBind(&req); err != nil {
+		//	ctx.JSON(http.StatusBadRequest, gin.H{
+		//		"err": "bind error",
+		//	})
+		//	return
+		//}
+
+		file, err := ctx.FormFile("content")
+		if err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{
-				"err": "bind error",
+				"err": "invalid file:" + err.Error(),
 			})
 			return
 		}
+		content, _ := file.Open()
+		defer content.Close()
+		req.Content, _ = ioutil.ReadAll(content)
+
+		sunset := ctx.PostForm("sunset")
+		if sunset != "" {
+			req.Sunset, err = strconv.Atoi(sunset)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{
+					"err": "invalid sunset value",
+				})
+				return
+			}
+		}
+
 		req.ID, _ = util.RemoveExt(ctx.Param("id"))
 
 		srv := service.GetClipboardSrv()

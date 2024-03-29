@@ -16,13 +16,15 @@ type Clipboard struct {
 	URL          string
 	UUID         string `gorm:"uniqueIndex"`
 	Size         int
-	Content      string
-	Burn         bool
+	//Content      string
+	Content []byte `gorm:"type:longblob"`
+	Burn    bool
 }
 
 type ClipboardReq struct {
-	ID      string `form:"id" json:"id"`
-	Content string `form:"content" json:"content"`
+	ID string `form:"id" json:"id"`
+	//Content string `form:"content" json:"content"`
+	Content []byte `form:"content" json:"content"`
 	Sunset  int    `form:"sunset" json:"sunset"`
 }
 
@@ -33,12 +35,13 @@ type AuthClipboardReq struct {
 }
 
 type ClipboardResp struct {
-	Date    string `json:"date"`
-	Digest  string `json:"digest"`
-	Short   string `json:"short"`
-	Size    int    `json:"size"`
-	URL     string `json:"url"`
-	Status  string `json:"status"`
-	UUID    string `json:"uuid"`
-	Content string `json:"content"`
+	Date   string `json:"date"`
+	Digest string `json:"digest"`
+	Short  string `json:"short"`
+	Size   int    `json:"size"`
+	URL    string `json:"url"`
+	Status string `json:"status"`
+	UUID   string `json:"uuid"`
+	//Content string `json:"content"`
+	Content []byte `json:"content"`
 }

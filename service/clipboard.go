@@ -110,7 +110,7 @@ func (s *ClipboardSrv) NewClipboard(ctx *gin.Context, req *model.ClipboardReq) (
 }
 
 // GetClipboard 获取剪切板内容
-func (s *ClipboardSrv) GetClipboard(ctx *gin.Context, req *model.ClipboardReq) (string, error) {
+func (s *ClipboardSrv) GetClipboard(ctx *gin.Context, req *model.ClipboardReq) ([]byte, error) {
 	clipboardDAO := dao.NewClipboardDAO(ctx)
 
 	// 获取剪贴板 ID
@@ -118,7 +118,7 @@ func (s *ClipboardSrv) GetClipboard(ctx *gin.Context, req *model.ClipboardReq) (
 	// 在 DAO 层中查询剪贴板内容
 	clipboard, err := clipboardDAO.GetClipboard(id)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	switch clipboard.Access {
@@ -127,16 +127,16 @@ func (s *ClipboardSrv) GetClipboard(ctx *gin.Context, req *model.ClipboardReq) (
 	case model.AuthorAccess:
 		userID, exist := ctx.Get("UserID")
 		if !exist {
-			return "", errors.New("access denied")
+			return nil, errors.New("access denied")
 		}
 		if userID.(uint) != *clipboard.Author {
-			return "", errors.New("access denied")
+			return nil, errors.New("access denied")
 		}
 		return clipboard.Content, nil
 	case model.AuthorizedAccess:
 		userID, exist := ctx.Get("UserID")
 		if !exist {
-			return "", errors.New("access denied")
+			return nil, errors.New("access denied")
 		}
 		if userID.(uint) == *clipboard.Author {
 			return clipboard.Content, nil
@@ -150,11 +150,11 @@ func (s *ClipboardSrv) GetClipboard(ctx *gin.Context, req *model.ClipboardReq) (
 			}
 			return clipboard.Content, nil
 		}
-		return "", errors.New("access denied")
+		return nil, errors.New("access denied")
 	case model.NoneAccess:
-		return "expired", nil
+		return []byte("expired"), nil
 	}
-	return "", errors.New("wtf")
+	return nil, errors.New("wtf")
 }
 
 // UpdateClipboard 更新剪切板内容
